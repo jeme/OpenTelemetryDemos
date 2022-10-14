@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
@@ -43,6 +44,7 @@ namespace OpenTelemetryDemo
         private const string serviceVersion = "1.0.0";
 
         private static TracerProvider tracerProvider;
+        public static ActivitySource ActivitySource { get; } = new ActivitySource(serviceName, serviceVersion);
 
         public static void Initialize()
         {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -23,10 +24,18 @@ builder.Services.AddOpenTelemetryTracing(builder => {
         });
 });
 
+ActivitySource activitySource = new ActivitySource(serviceName, serviceVersion);
 
 WebApplication app = builder.Build();
-app.MapGet("/api/values", () =>
+app.MapGet("/api/values", async () =>
 {
+    await Task.Delay(200);
+    using (Activity? activity = activitySource.StartActivity("SomeActivity"))
+    {
+        activity?.SetTag("mytag", "tag-value");
+        await Task.Delay(200);
+    }
     return new [] { "value1", "value2" };;
 });
 app.Run();
+
