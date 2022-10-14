@@ -1,7 +1,7 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -23,19 +23,39 @@ builder.Services.AddOpenTelemetryTracing(builder => {
             options.Protocol = OtlpExportProtocol.Grpc;
         });
 });
-
-ActivitySource activitySource = new ActivitySource(serviceName, serviceVersion);
+builder.Services.AddSingleton<ActivitySource>(new ActivitySource(serviceName, serviceVersion));
+builder.Services.AddSingleton<Dummy>();
 
 WebApplication app = builder.Build();
-app.MapGet("/api/values", async () =>
+app.MapGet("/api/values", async ([FromServices]ActivitySource activitySource, [FromServices]Dummy dummy) =>
 {
     await Task.Delay(200);
     using (Activity? activity = activitySource.StartActivity("SomeActivity"))
     {
         activity?.SetTag("mytag", "tag-value");
         await Task.Delay(200);
+        await dummy.DoDumbStuff();
     }
-    return new [] { "value1", "value2" };;
+    return new [] { "value1", "value2" };
 });
 app.Run();
 
+
+public class Dummy
+{
+    private readonly ActivitySource activitySource;
+
+    public Dummy(ActivitySource activitySource)
+    {
+        this.activitySource = activitySource;
+    }
+
+    public async Task DoDumbStuff()
+    {
+        using (Activity? activity = activitySource.StartActivity())
+        {
+            activity?.SetTag("mytag", "tag-value");
+            await Task.Delay(100);
+        }
+    }
+}
